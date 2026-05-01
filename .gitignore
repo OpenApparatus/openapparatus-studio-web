@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Claude Code local state — worktrees, launch configs, transcripts
+.claude/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -23,9 +26,12 @@ dist-ssr
 *.sln
 *.sw?
 
-# .NET / WASM build outputs (added when wasm/ build is wired up)
+# .NET / WASM build outputs
 [Bb]in/
 [Oo]bj/
 *.user
 *.userprefs
 .vs/
+# Published WASM bundle — copied into public/_framework by the build pipeline
+wasm/OpenApparatus.Wasm/dist/
+public/_framework/
