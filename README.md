@@ -8,7 +8,20 @@ The desktop app (Avalonia / .NET 8) remains the reference implementation. This r
 
 ## Status
 
-**Early scaffolding.** Vite + React + TypeScript shell only — no floor-plan UI yet. The next milestone is compiling `OpenApparatus.Core` to WASM and proving end-to-end generation in the browser.
+**Feasibility spike landed.** `OpenApparatus.Core` compiles to WebAssembly and drives a minimal "Generate" page in the browser end-to-end. No editor UI yet, no exporters, no 3D preview. Next milestones: extracting `ObjExporter` / `GltfExporter` / `JsonExporter` / `ProjectIO` from the desktop Studio assembly into a shared library, then a viewer-quality 2D/3D preview.
+
+### Spike measurements (Release publish, .NET 10, 6×6 grid + 3 rectangles)
+
+| Metric | Value |
+|---|---|
+| Bundle uncompressed | 3.2 MB |
+| Bundle gzipped | 1.2 MB |
+| Bundle brotli (Cloudflare default) | ~1.0 MB |
+| Cold load + first generate (local serve) | ~105 ms |
+| Warm-cache generate (mean of 5) | ~7 ms |
+| Rooms × doors generated | 33 × 33 (32 spanning-tree + 1 outer entrance) |
+
+The biggest single asset is `dotnet.native.wasm` (~370 KB brotli); `System.Private.CoreLib` and `System.Text.Json` follow at ~320 KB and ~47 KB. The JSON-over-string interop pattern (see below) costs the `System.Text.Json` chunk; if it ever matters we can swap to typed-array marshalling.
 
 ## Architecture (planned)
 
@@ -22,14 +35,28 @@ The Core dependency mirrors how the desktop app consumes it: relative `ProjectRe
 
 ## Development
 
-Requires Node 22+ (see `.nvmrc`).
+Requires Node 22+ (see `.nvmrc`), .NET 10 SDK, and the `wasm-tools` workload (`dotnet workload install wasm-tools`).
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm run build    # production bundle in dist/
-npm run preview  # serve the production bundle locally
+npm run build:wasm   # publish .NET → wasm/.../dist + copy into public/_framework/
+npm run dev          # http://localhost:5173
+npm run build        # production bundle in dist/ (auto-runs build:wasm first)
+npm run preview      # serve the production bundle locally
 ```
+
+The `predev` hook runs `build:wasm` only if `public/_framework/` is missing — change C# code? rerun `npm run build:wasm` manually. The TS/React side hot-reloads as usual.
+
+If `OpenApparatus.Core` lives somewhere other than the sibling-clone path
+(e.g. when working inside a worktree), point the build at it:
+
+```bash
+OPENAPPARATUS_CORE_REPO=/path/to/openapparatus-core npm run build:wasm
+```
+
+## Interop pattern (notes from the spike)
+
+`OpenApparatus.Wasm/Interop.cs` exposes a single `[JSExport]` static method that returns a JSON string. Object graphs from Core (`MultiRoomEnvironment` → `Room` → `IRoomShape`, `Adjacency` → `Passage` polymorphism) cross the JS/WASM boundary as a flat DTO serialized with `System.Text.Json` source-gen — no attempt to marshal the live CLR objects across. This sidesteps `[JSExport]`'s limits on arbitrary reference types and keeps the surface trivially evolvable.
 
 ## Repo layout
 

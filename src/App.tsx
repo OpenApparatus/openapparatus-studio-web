@@ -1,122 +1,149 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from 'react';
+import { generateFloorPlan, type FloorPlan } from './wasm/openapparatus';
+
+const DEFAULT_PARAMS = {
+  floorWidthCells: 6,
+  floorLengthCells: 6,
+  rectangleRoomCount: 3,
+  tileSize: 3.5,
+};
+
+const ROOM_FILL: Record<string, string> = {
+  Square: '#dde6f0',
+  Rectangle: '#cfd8e3',
+};
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [seed, setSeed] = useState(42);
+  const [plan, setPlan] = useState<FloorPlan | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+
+  async function onGenerate() {
+    setLoading(true);
+    setError(null);
+    const t0 = performance.now();
+    try {
+      const result = await generateFloorPlan({ seed, ...DEFAULT_PARAMS });
+      setPlan(result);
+      setElapsedMs(performance.now() - t0);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+    <main style={{ fontFamily: 'system-ui, sans-serif', padding: 24, maxWidth: 900 }}>
+      <h1>OpenApparatus WASM spike</h1>
+      <p style={{ color: '#555' }}>
+        Click <em>Generate</em> to run the .NET grid-domino generator + spanning-tree
+        passage assigner inside the browser. First click also downloads the runtime
+        (~1&nbsp;MB brotli).
+      </p>
+
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', margin: '16px 0' }}>
+        <label>
+          Seed:{' '}
+          <input
+            type="number"
+            value={seed}
+            onChange={(e) => setSeed(parseInt(e.target.value, 10) || 0)}
+            style={{ width: 80 }}
+          />
+        </label>
+        <button onClick={onGenerate} disabled={loading}>
+          {loading ? 'Generating…' : 'Generate'}
         </button>
-      </section>
+        {elapsedMs !== null && (
+          <span style={{ color: '#555' }}>Last call: {elapsedMs.toFixed(1)} ms</span>
+        )}
+      </div>
 
-      <div className="ticks"></div>
+      {error && (
+        <pre style={{ color: '#a00', whiteSpace: 'pre-wrap' }}>Error: {error}</pre>
+      )}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
+      {plan && <FloorPlanSvg plan={plan} />}
+
+      {plan && (
+        <details style={{ marginTop: 16 }}>
+          <summary>Plan stats</summary>
           <ul>
+            <li>Seed: {plan.seed}</li>
+            <li>Rooms: {plan.rooms.length}</li>
+            <li>Doors: {plan.doors.length}</li>
             <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
+              Bounds: ({plan.minX.toFixed(1)}, {plan.minZ.toFixed(1)}) → (
+              {plan.maxX.toFixed(1)}, {plan.maxZ.toFixed(1)})
             </li>
           </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        </details>
+      )}
+    </main>
+  );
 }
 
-export default App
+function FloorPlanSvg({ plan }: { plan: FloorPlan }) {
+  const pad = 1;
+  const minX = plan.minX - pad;
+  const minZ = plan.minZ - pad;
+  const w = plan.maxX - plan.minX + pad * 2;
+  const h = plan.maxZ - plan.minZ + pad * 2;
+  // SVG y grows down; flip Z so +Z renders up.
+  return (
+    <svg
+      viewBox={`${minX} ${minZ} ${w} ${h}`}
+      style={{
+        width: '100%',
+        maxWidth: 600,
+        border: '1px solid #ddd',
+        background: '#fafafa',
+      }}
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <g transform={`translate(0 ${2 * minZ + h}) scale(1 -1)`}>
+        {plan.rooms.map((r) => (
+          <g key={r.id}>
+            <rect
+              x={r.x}
+              y={r.z}
+              width={r.w}
+              height={r.d}
+              fill={ROOM_FILL[r.type] ?? '#eee'}
+              stroke="#333"
+              strokeWidth={0.05}
+            />
+            <text
+              x={r.x + r.w / 2}
+              y={r.z + r.d / 2}
+              fontSize={0.6}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#333"
+              transform={`scale(1 -1) translate(0 ${-2 * (r.z + r.d / 2)})`}
+            >
+              {r.id}
+            </text>
+          </g>
+        ))}
+        {plan.doors.map((d, i) => (
+          <line
+            key={i}
+            x1={d.x1}
+            y1={d.z1}
+            x2={d.x2}
+            y2={d.z2}
+            stroke="#c33"
+            strokeWidth={0.2}
+            strokeLinecap="round"
+          />
+        ))}
+      </g>
+    </svg>
+  );
+}
+
+export default App;

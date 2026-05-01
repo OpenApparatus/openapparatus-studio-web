@@ -4,7 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "predev": "node scripts/ensure-wasm.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/build-wasm.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

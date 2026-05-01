@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>OpenApparatus.Wasm</RootNamespace>
+    <AssemblyName>OpenApparatus.Wasm</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+    <WasmEnableExceptionHandling>true</WasmEnableExceptionHandling>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <!-- CA1416: [JSExport] is browser-only by analyzer rules, but this project only ever
+         runs in browser-wasm. Suppress globally rather than per-call-site. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
+    <OpenApparatusCoreRepo Condition=" '$(OpenApparatusCoreRepo)' == '' ">$(MSBuildThisFileDirectory)..\..\..\openapparatus-core\</OpenApparatusCoreRepo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(OpenApparatusCoreRepo)src\OpenApparatus.Core\OpenApparatus.Core.csproj" />
+  </ItemGroup>
+
+</Project>
